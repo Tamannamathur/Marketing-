@@ -1,0 +1,83 @@
+# Install and load necessary libraries
+install.packages(c("readxl", "dplyr", "ggplot2", "cluster", "factoextra", "corrplot"))
+library(readxl)      # Read Excel files
+library(dplyr)       # Data manipulation
+library(ggplot2)     # Visualization
+library(cluster)     # Clustering analysis
+library(factoextra)  # Determine optimal clusters
+library(corrplot)    # Correlation matrix visualization
+
+# Read the dataset
+file_path <- "/Users/tamannamathur/Desktop/SmartWatch Data File.xlsx"
+data <- read_excel(file_path)
+
+# Check the structure of the dataset
+str(data)
+
+# Summary statistics of numerical variables
+summary(data)
+
+# Check for missing values
+sum(is.na(data))
+
+# Select only numerical columns for correlation
+num_vars <- data %>% select(ConstCom, TimelyInf, TaskMgm, DeviceSt, Wellness, Athlete, Style)
+
+# Compute correlation matrix
+cor_matrix <- cor(num_vars)
+
+# Visualize correlation matrix
+corrplot(cor_matrix, method = "color", type = "upper", tl.cex = 0.8, tl.col = "black", addCoef.col = "black")
+
+# Scale the data for clustering
+scaled_data <- scale(num_vars)
+
+# Elbow Method
+fviz_nbclust(scaled_data, kmeans, method = "wss") + 
+  ggtitle("Elbow Method for Optimal Clusters")
+
+# Silhouette Method
+fviz_nbclust(scaled_data, kmeans, method = "silhouette") + 
+  ggtitle("Silhouette Method for Optimal Clusters")
+
+# Apply K-Means clustering
+set.seed(123)
+kmeans_result <- kmeans(scaled_data, centers = 3, nstart = 25)
+
+# Assign cluster labels to the dataset
+data$Segment <- as.factor(kmeans_result$cluster)
+
+# View first few rows with segment labels
+head(data)
+
+# Compute mean values for each segment
+segment_summary <- data %>%
+  group_by(Segment) %>%
+  summarise(
+    ConstCom = mean(ConstCom),
+    TimelyInf = mean(TimelyInf),
+    TaskMgm = mean(TaskMgm),
+    DeviceSt = mean(DeviceSt),
+    Wellness = mean(Wellness),
+    Athlete = mean(Athlete),
+    Style = mean(Style),
+    Age = mean(Age),
+    Income = mean(Income)
+  )
+
+# Print segment characteristics
+print(segment_summary)
+
+# Boxplot comparison for key features
+ggplot(data, aes(x = Segment, y = Wellness, fill = Segment)) +
+  geom_boxplot() +
+  labs(title = "Wellness Importance by Segment", x = "Segment", y = "Importance")
+
+ggplot(data, aes(x = Segment, y = Athlete, fill = Segment)) +
+  geom_boxplot() +
+  labs(title = "Athlete Feature Importance by Segment", x = "Segment", y = "Importance")
+
+ggplot(data, aes(x = Segment, y = Style, fill = Segment)) +
+  geom_boxplot() +
+  labs(title = "Fashion & Style Importance by Segment", x = "Segment", y = "Importance")
+ 
